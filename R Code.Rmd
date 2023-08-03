@@ -1,0 +1,252 @@
+---
+title: "TED Talks by Speaker David Hanson and Speaker Chris Burkard"
+author: "Markal Puttaswamy, Prajwal"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+### Don't delete this setup code chunk from your file
+knitr::opts_chunk$set(echo = FALSE, message = TRUE, warning = FALSE, comment = NULL, error = FALSE)   ## DON'T ALTER THIS: this is to prevent printing the code or any unnecessary addition in your final "html" report file.
+
+# You can extend this list below to load all the packages required for your analyses:
+#====================================================================================
+library(dsEssex)
+library(tidytext)
+library(tidyverse)
+library(ggrepel)
+library(cowplot)
+library(ggthemes)
+library(knitr)
+# load the 'ted_talks' data
+#=========================
+data("ted_talks")
+```
+
+## Introduction
+
+In this report, we will analyze the TED Talks given by speakers **David Hanson and Chris Burkard**. **David Hanson** is a roboticist who created human-like robots that can simulate human emotions, while **Chris Burkard** is a photographer who travels to remote places to capture stunning photographs of nature. We will analyze their talks to understand the common themes and topics covered, and compare their presentation styles.
+
+The TED Talks we will be analyzing are:  
+
+**David Hanson: Robots that "show emotion"**  
+**Chris Burkard: The joy of surfing in ice-cold water**   
+
+David Hanson's talk was given in the year 2009, while Chris Burkard's talk was given in the year 2015  
+
+## Methods
+
+To perform the analysis of the TED talks given by **David Hanson and Chris Burkard**, we followed the following steps:
+
+1.**Data Collection**: We obtained the data of the TED talks given by David Hanson and Chris Burkard from the **DsEssex** Package.   
+2.**Text Preprocessing**: We performed text preprocessing on the data to prepare it for analysis. We used the **tidytext** package in R to remove the stopwords,and tokenization.    
+3.**Text Analysis**: We performed text analysis on the preprocessed data to extract insights and patterns.     
+4.**sentiment analysis**: we Perform sentiment analysis to understand the sentiment of the talks.      
+5.**Visualization**: We visualized the results of our analysis using **ggplot2,Cowplot,ggthemes,and ggrepel** packages in R.       
+
+## Results
+
+### Data Preprocessing
+
+Before we perform any analysis, we need to preprocess the TED Talks data. We will load the data and preprocess it by Filtering,removing stopwords,and Tokenization. 
+
+The table below shows us the glimpse of pre-processed Data.  
+
+```{r}
+#Filtering the Ted Talks done by the speakers David Hanson and Chris Burkard
+My_data <- ted_talks %>% filter(speaker %in% c("David Hanson","Chris Burkard"))
+
+#Tokenisation of Text and stop words removal
+clean_data <-suppressMessages(My_data  %>%
+  ungroup() %>% unnest_tokens(word, text) %>%   #split the text of each talk into separate rows for each word
+  anti_join(get_stopwords()))                   #Remove any stop words 
+  
+#Count the occurrence of each word spoken by each speaker and sort them  
+tidy_talks <- clean_data %>%                
+count(speaker, word, sort = TRUE) 
+
+# separate each speaker's words using pivot_wider
+speakers_words <- tidy_talks %>% 
+pivot_wider(names_from = "speaker", values_from = "n", values_fill = 0)
+
+kable(head(speakers_words))
+```
+
+### Text Analysis
+
+An analysis of the talks by the two speakers reveals that most of the words used by them appear less than five times. This observation is significant as it suggests that the speakers have consciously avoided repeating the same words frequently, which could potentially bore or disengage their audience
+
+
+
+
+```{r,fig.height=4, fig.width=6}
+ggplot(speakers_words) +
+ aes(x = `Chris Burkard`, y = `David Hanson`, fill = `Chris Burkard`, colour = `David Hanson`) +
+ geom_jitter(size = 1.5) +
+ scale_fill_distiller(palette = "Spectral", direction = -1) +
+ scale_color_distiller(palette = "Spectral", 
+ direction = -1) +
+ labs(title = "Text analysis through Visualization", subtitle = "Frequency of David Hanson's and Chris Burkard's Words", 
+ fill = "Chris Burkard words", color = "David Hanson words") +
+ ggthemes::theme_stata() +
+ theme(legend.position = "none",plot.title = element_text(size = 16L, face = "bold", hjust = 0.1),plot.subtitle = element_text(size = 14L, 
+ face = "italic", hjust = 0.1), plot.caption = element_text(size = 12L, face = "bold", hjust = 0.5), 
+ axis.title.y = element_text(size = 12L, face = "bold"), axis.title.x = element_text(size = 12L, face = "bold"))
+
+
+```
+
+Upon analyzing the talks of **David and Chris**, it is evident that both speakers have used only one word more than 10 times. David's repeated use of the word **'robots'** could be attributed to his field of expertise, as he is an expert in robotics and artificial intelligence. The use of this word could be seen as an attempt to emphasize the importance and impact of robotics on our lives.
+
+On the other hand, Chris's repeated use of the word **'just'** could indicate his tendency to downplay the difficulty of his work or the landscapes he photographs. The repeated use of this word could suggest that he is trying to communicate the accessibility and simplicity of his work to his audience.
+
+```{r}
+
+# Filter and Text analysis on David Hanson's TED Talks
+David_top_word <- tidy_talks %>% 
+  filter(speaker %in% c("David Hanson")) %>% 
+  slice_max(n, n = 15) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n))
+
+#Display top 15 words of David Hanson Ted Talk
+  david_plot <- David_top_word %>% ggplot(aes(n, word, fill = n)) +
+  geom_col() +
+  scale_fill_gradient(low = "#efedf5", high = "#756bb1") +
+  facet_wrap(~speaker, ncol = 2, scales = "free") +
+  labs(title = "Top 15 words in David Hanson's TED Talks",
+       x = "Frequency",
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 10, face = "bold"))
+
+```
+
+
+
+
+```{r}
+# Filter and Text analysis on Chris Burkard's TED Talk
+
+chris_top_word <- tidy_talks %>% 
+  filter(speaker %in% c("Chris Burkard")) %>% 
+  slice_max(n, n = 15) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) 
+
+#display the top 15 words of Chris Burkard's ted Talk
+
+ chris_plot <- chris_top_word %>%  ggplot(aes(n, word, fill = n)) +
+  geom_col() +
+  scale_fill_gradient(low = "#e7e1ef", high = "#dd1c77") +
+  facet_wrap(~speaker, ncol = 2, scales = "free") +
+  labs(title = "Top 15 words in Chris Burkard's TED Talk",
+       x = "Frequency",
+       y = NULL) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 10, face = "bold"))
+
+  cowplot::plot_grid(david_plot, chris_plot, ncol = 2)
+
+```
+
+
+```{r}
+ # use bing Lexion to get the sentiments
+sentiments_talks <- suppressMessages(clean_data %>% 
+  inner_join(get_sentiments("bing")) %>%
+  count(speaker, word, sort = TRUE) %>%
+  ungroup())
+  
+  
+```
+### Sentimental Analysis 
+#### Speakers sentiments comparison through visualization
+A sentiment visualization of the talks by David and Chris reveals interesting patterns in the choice of words used by the two speakers. It is observed that both speakers used some common sentiments such as **"favorite", "great", "incredible", "thank", and "smile"**. These sentiments could be attributed to the positive nature of the talks and the desire of the speakers to engage their audience positively.
+
+However, the two speakers diverge in the selection of some of their top sentiments. David used **empathy, friendly, and intelligence** as his top sentiments, suggesting his emphasis on emotional connection with the audience and the importance of intelligence in his field of robotics and artificial intelligence. These sentiments could be interpreted as an attempt to create a personal connection with his audience and to convey the importance of his work in a relatable manner.
+```{r}
+# plot the common sentiment used by Both speaker's
+sentiments_talks %>% 
+  pivot_wider(names_from = "speaker", values_from = "n", values_fill = 0) %>% 
+  ggplot(aes(`David Hanson`, `Chris Burkard`))+
+   geom_abline(color = "blue", size = 1.2, alpha = 0.8, lty = 2) +
+  # use the special ggrepel geom for nicer text plotting
+  geom_text_repel(aes(label = word), max.overlaps = 25)
+
+```
+
+On the other hand, Chris used sentiments **like, cold and joy**, which may seem to be contradictory at first glance. This choice of sentiments could be explained by the fact that Chris is a photographer who often captures landscapes in cold environments. The use of the word 'cold' could be interpreted as a reference to his unique experiences in these environments. The use of the word 'joy' could indicate his enjoyment of this type of photography despite the harsh conditions.
+
+#### Positive to Negative Ratios
+
+The comparison between Chris Burkard's and David Hanson's talks reveals some interesting insights. It is noteworthy that Chris Burkard's talk has a substantially higher view count compared to David Hanson's talk. This discrepancy in popularity prompts further analysis to determine the factors contributing to this difference
+```{r}
+Speaker_View <- data.frame(speaker = My_data$speaker, views = My_data$views)
+kable(Speaker_View)
+```
+
+One possible explanation for the difference in view count could be the subject matter of the talks. Chris Burkard is a renowned photographer known for his captivating landscape photographs, while David Hanson is an expert in robotics and artificial intelligence. It is possible that the audience for photography enthusiasts is larger than that of robotics experts, which could explain the difference in view count.
+
+```{r}
+# add percentage column by using "n" column
+sentiments_talks <- suppressMessages(tidy_talks %>% 
+  inner_join(get_sentiments('bing'))%>% 
+  count(word, speaker, sentiment,sort = TRUE) %>% 
+  group_by(speaker) %>%
+  mutate(total = sum(n), percent = n / total) %>% 
+  mutate(pos_prop = sum(total[sentiment == "positive"]) / total,
+         neg_prop = sum(total[sentiment == "negative"]) / total))
+  
+```
+
+```{r}
+#count the sentiments 
+count_sentiments <- sentiments_talks %>%
+  group_by(sentiment) %>%
+  mutate(word = reorder(word, n)) %>%
+  ungroup() %>%
+  group_by(speaker) %>% 
+  filter(sentiment %in% c("positive", "negative")) %>% # count only the positive and negative sentiments
+  count(sentiment) %>%
+  group_by(speaker) %>%
+  mutate(total = sum(n), percent = round(n / total * 100, 2)) %>%
+  ungroup()
+
+kable(count_sentiments)
+```
+Another interesting aspect of the comparison is the difference in the sentiment expressed in the talks. Despite having a low positive sentiment, Chris Burkard's talk has still managed to garner a large audience. This suggests that the sentiment expressed in a talk is not necessarily a determining factor for its popularity.
+
+```{r}
+#display sentiments using ggplot
+ggplot(count_sentiments) +
+  aes(
+    x = sentiment,
+    y = n,
+    fill = percent,
+    colour = percent,
+    group = sentiment
+  ) +
+  geom_col() +
+  labs(title = "Positive to neagtive ratio",
+       x = "Sentiment",
+       y = "n") +
+  scale_fill_gradient(low = "#99d8c9", high = "#3182bd") +
+  scale_color_gradient(low = "#99d8c9", high = "#3182bd") +
+  ggthemes::theme_stata() +
+  facet_wrap(vars(speaker), scales = "free_y")
+                  
+
+```
+
+
+## Conslusion 
+
+From the sentiment analysis, we can conclude that Chris Burkard's talk on "The joy of surfing in ice-cold water
+" has a relatively balanced sentiment with an overall positive sentiment score of 0.48. This suggests that his talk did not evoke extreme emotions from the audience and the sentiment was fairly neutral
+
+While the topics of the two talks are quite different, both David Hanson and Chris Burkard share a passion for exploring the limits of what is possible, whether it be in the realm of artificial intelligence or adventure sports. Both talks also touch on the theme of how technology and nature can intersect in unexpected ways, and the potential benefits that can result.
+
+
+
